@@ -10,7 +10,8 @@ both are optional. Python helpers are in `lib/`.
 
 1. Copy `pipeline/` into a project directory (scripts work relative to `pipeline/..`), with a clone of
    GrASE (`GrASE/`, or set `GRASE_DIR`).
-2. Write the sample sheet `support/samples.tsv`: `sample <tab> group <tab> condition`, no header. Within each
+2. Write the sample sheet `support/samples.tsv`: `sample <tab> group <tab> condition`, no header (example:
+   `examples/samples.tsv`, the water-study design: 4 taxa x control/drought/waterlogging). Within each
    group, every condition is compared with `CONTROL` (default `control`). BAMs are
    `<BAM_DIR>/<sample><BAM_SUFFIX>`.
 3. Write the project's settings in `<project>/pipeline.config.sh` (plain `VAR=value` lines; outside the
@@ -52,7 +53,7 @@ Current build: 2026-11-13 to 2026-11-15. Numbers below are from it.
 multi-mapped reads included, MAKER guide) plus an Aletsch meta-assembly. It fused neighbouring genes and
 near-identical paralogs into single loci (e.g. a receptor-like-protein cluster, a MATE transporter pair, a
 read-through across four unrelated genes), and most GrASE events that "replicated" across taxa sat in such
-loci. Its scripts are in `obsolete/`; its outputs were deleted on 2026-11-15 (the original per-sample StringTie
+loci. Its scripts are kept outside the repository (`obsolete/` in the original project); its outputs were deleted on 2026-11-15 (the original per-sample StringTie
 assemblies in `taxon*/stringtie/` and the merges `merged.f0.01.gtf`, `merged.f0.05.gtf` are kept as source
 data). Lessons that shaped the current design:
 - Multi-mapped reads joined paralog copies; assembly now uses unique reads only (MAPQ 255).
