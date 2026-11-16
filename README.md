@@ -13,9 +13,11 @@ both are optional. Python helpers are in `lib/`.
 2. Write the sample sheet `support/samples.tsv`: `sample <tab> group <tab> condition`, no header. Within each
    group, every condition is compared with `CONTROL` (default `control`). BAMs are
    `<BAM_DIR>/<sample><BAM_SUFFIX>`.
-3. Edit `pipeline/config.sh`: genome, reference GTF (or empty for reference-free), library type, read length,
-   unique-read MAPQ, conda env paths, threads. Any value can also be overridden from the environment, and
-   `CONFIG=<file>` selects another config file.
+3. Write the project's settings in `<project>/pipeline.config.sh` (plain `VAR=value` lines; outside the
+   repository): at least `GENOME`, `REF_GTF` (empty for reference-free), `BAM_DIR`, `BAM_SUFFIX`, `LIBTYPE`,
+   `READ_LEN` and `ENVS` (conda envs). `pipeline/config.sh` holds the generic defaults and loads this file
+   first; don't edit it per project. Environment variables override both; `PROJECT_CONFIG=<file>` selects
+   another project file.
 4. `nohup pipeline/run_all.sh > run_all.log 2>&1 &`. It runs `setup.sh` (checks the sample sheet, BAMs and
    indexes, genome index, that every tool runs on this CPU, and downloads/builds Swiss-Prot if needed), then
    steps 02 and 03, then `run_downstream.sh` (rMATS and GrASE in parallel). Every step skips finished work,

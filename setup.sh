@@ -44,7 +44,7 @@ done
 ok "$nb BAMs"
 
 echo "== 3. genome and reference"
-[[ -s $GENOME ]] && ok "genome $GENOME" || bad "missing genome $GENOME"
+if [[ -z $GENOME ]]; then bad "GENOME not set (pipeline.config.sh)"; elif [[ -s $GENOME ]]; then ok "genome $GENOME"; else bad "missing genome $GENOME"; fi
 FAI=support/$(basename "$GENOME").fai; mkdir -p support
 if [[ -s $GENOME && ! -s $FAI ]]; then "$SAMTOOLS" faidx --fai-idx "$FAI" "$GENOME" && ok "indexed -> $FAI" || bad "samtools faidx failed"; fi
 if [[ -n $REF_GTF ]]; then
