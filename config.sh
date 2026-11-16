@@ -53,8 +53,6 @@ unset _pc _l _v
 : "${RMATS_ENV:=$ENVS/rmats420}"             # python + rMATS/rmats.py
 : "${GRASE_ENV:=$ENVS/grase}"                # R + grase package, python + HTSeq
 : "${PYTHON:=$GRASE_ENV/bin/python}"         # pandas, scipy
-: "${STRINGTIE:=$ENVS/stringtie3/bin/stringtie}"   # only for COMPARE_MERGERS=1 in step 02
-: "${TACO_RUN:=$ENVS/taco/bin/taco_run}"           # only for COMPARE_MERGERS=1 in step 02
 
 # --- resources --------------------------------------------------------------------------
 : "${THREADS:=16}"
@@ -77,4 +75,4 @@ pipeline_conditions() { awk -F'\t' -v g="$1" '$2==g {print $3}' "$SAMPLES" | sor
 pipeline_samples() { awk -F'\t' -v g="$1" -v c="$2" '$2==g && $3==c {print $1}' "$SAMPLES"; }
 export SAMPLES CONTROL BAM_DIR BAM_SUFFIX GENOME REF_GTF MAKER_GTF CONDITIONS LIBTYPE PAIRED READ_LEN MIN_MAPQ \
   HOMOLOGY_DB ENVS GRASE_DIR SCALLOP2 GFFCOMPARE SAMTOOLS BLASTP MAKEBLASTDB RMATS_ENV GRASE_ENV PYTHON \
-  STRINGTIE TACO_RUN THREADS JOBS RMATS_LIBTYPE DEXSEQ_STRANDED RMATS_READTYPE
+  THREADS JOBS RMATS_LIBTYPE DEXSEQ_STRANDED RMATS_READTYPE

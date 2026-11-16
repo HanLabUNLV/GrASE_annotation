@@ -11,18 +11,15 @@
 # Why Scallop2 per sample and not a merged assembly: multi-mapped reads joined paralogs, and mergers
 # (stringtie --merge, TACO) kept only 45-57% of well-supported junctions vs 73% in the per-sample
 # assemblies; step 03 builds the annotation as a filtered union instead (pipeline/README.md).
-# COMPARE_MERGERS=1 also writes those mergers' output for comparison (not used downstream):
-#   stringtie --merge -g 0 -c 3 -f 0.1 -> merge/stringtie_merge.gtf; taco_run --isoform-frac 0.1 -> merge/taco/
 # Settings: pipeline/config.sh. Restartable: finished samples are skipped.
 #
-# Usage: [OUT=assembly_unique MIN_TX_COV=3.0 COMPARE_MERGERS=0] pipeline/02_assemble_scallop2.sh
+# Usage: [OUT=assembly_unique MIN_TX_COV=3.0] pipeline/02_assemble_scallop2.sh
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")/.."   # project directory
 PROJ=$PWD
 . "${CONFIG:-pipeline/config.sh}"
 OUT=$(readlink -m "${OUT:-assembly_unique}")
 MIN_TX_COV=${MIN_TX_COV:-3.0}
-COMPARE_MERGERS=${COMPARE_MERGERS:-0}
 BAM_DIR=$(readlink -f "$BAM_DIR")
 
 mkdir -p "$OUT"
@@ -48,11 +45,4 @@ awk -v d="$OUT/scallop2" '{print d"/"$1"/"$2".scallop2.gtf"}' "$OUT/samples.txt"
 while read -r f; do [[ -s $f ]] || { echo "missing $f"; exit 1; }; done < "$OUT/gtf_list.scallop2.txt"
 echo "   transcripts per sample: $(while read -r f; do awk '$3=="transcript"' "$f" | wc -l; done < "$OUT/gtf_list.scallop2.txt" | sort -n | awk '{a[NR]=$1} END{print "min "a[1]", median "a[int((NR+1)/2)]", max "a[NR]}')"
 
-if [[ $COMPARE_MERGERS == 1 ]]; then
-  mkdir -p "$OUT/merge"; M=$OUT/merge/stringtie_merge.gtf
-  [[ -s $M ]] || "$STRINGTIE" --merge -g 0 -c 3 -f 0.1 -o "$M" "$OUT/gtf_list.scallop2.txt"
-  [[ -s $OUT/merge/taco/assembly.gtf ]] || { rm -rf "$OUT/merge/taco"; "$TACO_RUN" -o "$OUT/merge/taco" -p "$THREADS" \
-    --gtf-expr-attr cov --filter-min-expr 2.0 --isoform-frac 0.1 "$OUT/gtf_list.scallop2.txt" > "$OUT/merge/taco.log" 2>&1; }
-  echo "   comparison merges in $OUT/merge/"
-fi
 echo "== done ($(date))"

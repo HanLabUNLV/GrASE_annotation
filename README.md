@@ -71,8 +71,6 @@ design:
   MAPQ 255 = unique for STAR (use 60 for HISAT2); applied while reading, so no filtered BAM copies are needed.
 - Scallop2 prints its splice graphs even with `--verbose 0` (~3-4 GB per sample); only the last 100 lines of
   each log (`<sample>.log`) are kept.
-- **Comparison only (`COMPARE_MERGERS=1`, off by default):** `stringtie --merge -g 0 -c 3 -f 0.1` (StringTie
-  3.0.0) and `taco_run --isoform-frac 0.1` of the Scallop2 GTFs -> `assembly_unique/merge/`.
 - **This build:** 40,384-57,576 transcripts per sample (median 49,546); `assembly_unique/gtf_list.scallop2.txt`.
   ~3 h for 63 samples with 12 workers.
 
@@ -183,11 +181,9 @@ design:
 ## Environments
 
 Conda envs under `ENVS` (set in `pipeline.config.sh`; tool paths are in `config.sh`). Used for the water study:
-`scallop2` (Scallop2 1.1.2, build `h503566f_7`), `stringtie3` (StringTie 3.0.0, build `h29c0135_0`; 3.0.1-3.0.3
-builds need AVX2 and crash on this CPU), `stringtie22` (StringTie 2.2.3, gffcompare 0.12.10), `taco` (TACO
-0.7.3, comparison only), `blast` (BLAST+ 2.17.0), `rmats420` (rMATS 4.2.0, samtools), `grase` (R 4.4,
-GrASE 2.0.0 from `GrASE/Rpkg`, Python 3.11 + HTSeq; recipe `GrASE/environment.yml`),
-`aletsch`, `agat_env`. `setup.sh` checks that each tool runs on the current CPU. Run rMATS through the env's
+`scallop2` (Scallop2 1.1.2, build `h503566f_7`), `stringtie22` (gffcompare 0.12.10), `blast` (BLAST+ 2.17.0),
+`rmats420` (rMATS 4.2.0, samtools 1.21), `grase` (R 4.4, GrASE 2.0.0 from `GrASE/Rpkg`, Python 3.11 + HTSeq,
+pandas, scipy; recipe `GrASE/environment.yml`). `setup.sh` checks that each tool runs on the current CPU. Run rMATS through the env's
 python (`$ENV/bin/python $ENV/rMATS/rmats.py`).
 
 ## Why junction support is counted from the BAMs, not from STAR's SJ.out.tab
