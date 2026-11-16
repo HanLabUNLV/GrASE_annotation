@@ -1,10 +1,13 @@
-# Splicing pipeline (water-study *Metrosideros*)
+# Splicing annotation and analysis pipeline for non-model organisms
 
-Builds a transcript annotation for splicing analysis from 63 STAR BAMs (4 taxa G/I/L/T; 101 bp paired-end,
-fr-firststrand / dUTP), then runs rMATS and GrASE within each taxon (drought vs control, waterlogging vs
-control). Designed to be reusable for non-model organisms: the annotation is built from the RNA-seq reads;
-a reference gene-model set and Swiss-Prot are used only to catch read-through/fusions and to name genes, and
-both are optional. Python helpers are in `lib/`.
+Builds a transcript annotation for splicing analysis from RNA-seq BAMs, then tests differential splicing with
+rMATS and GrASE within each sample group (every condition vs a control). The annotation is built from the
+reads; a reference gene-model set and Swiss-Prot are used only to catch read-through/fusions and to name genes,
+and both are optional. Python helpers are in `lib/`.
+
+Developed on a water-stress study of *Metrosideros* (63 STAR BAMs, 4 taxa x control/drought/waterlogging,
+101 bp paired-end, dUTP; sample sheet in `examples/samples.tsv`). Numbers quoted below ("this build") are from
+that study's run of 2026-11-13 to 15.
 
 ## Running it
 
@@ -24,21 +27,22 @@ both are optional. Python helpers are in `lib/`.
    steps 02 and 03, then `run_downstream.sh` (rMATS and GrASE in parallel). Every step skips finished work,
    so a stopped run restarts with the same command.
 
-Tested end to end in a fresh directory (`test_e2e/`: chr10, 2 groups x 3 conditions x 3 samples) on
-2026-11-15. This project's first full build used `TAG=scallop2` (outputs `rmats_scallop2*/`, `grase_scallop2/`);
-`run_all.sh` writes `rmats/`, `rmats_prefiltered/`, `grase/`.
+Tested end to end from a fresh directory on 2026-11-15 (chromosome 10 of 18 samples, 2 groups x 3 conditions x
+3 samples: setup built the BAM and genome indexes and Swiss-Prot from scratch; all steps ran in ~1 h).
+`run_all.sh` writes `rmats/`, `rmats_prefiltered/` and `grase/`; `TAG=<x>` gives `rmats_<x>/` etc. (the
+water-study build used `TAG=scallop2`).
 
 | Step | Script | What it does | Main output |
 |---|---|---|---|
 | | `setup.sh` | Checks and one-time setup (BAM indexes, genome index, Swiss-Prot BLAST db) | |
-| 02 | `02_assemble_scallop2.sh` | Scallop2 per sample on uniquely mapped reads | `assembly_unique/scallop2/<taxon>/<S>.scallop2.gtf` |
-| 03 | `03_union_filter.sh` | Union of the 63 assemblies; junction rules; paralog filter; selection; read-through and homology checks; genes | `assembly_unique/annotation.final.gtf` |
-| 08 | `08_run_rmats.sh` | rMATS: read BAMs, detect and count events (`--novelSS --statoff`) | `rmats_scallop2/` |
-| 12 | `12_rmats_prefiltered.sh` | rMATS statistics on events passing the junction rules | `rmats_scallop2_prefiltered/` |
-| 11 | `11_filter_rmats.py` | rMATS significance filter | `rmats_scallop2_prefiltered/*/*/filtered_jc10_fdr0.05_absdpsi0.1/` |
-| 09 | `09_grase_annotation.sh` | GrASE per-gene files, splicing graphs, bipartitions, overhang filter | `grase_scallop2/` |
-| 10 | `10_grase_count.sh` | GrASE Stage 1: DEXSeq exonic-part counts | `grase_scallop2/DEXSeq/count_files/` |
-| 13 | `13_grase_test.sh` | GrASE Stages 2, 2b, 3: counts onto bipartitions, junction substitution, tests | `grase_scallop2/test_anc12/<taxon>/grase_exsj/` |
+| 02 | `02_assemble_scallop2.sh` | Scallop2 per sample on uniquely mapped reads | `assembly_unique/scallop2/<group>/<S>.scallop2.gtf` |
+| 03 | `03_union_filter.sh` | Union of the assemblies; junction rules; paralog filter; selection; read-through and homology checks; genes | `assembly_unique/annotation.final.gtf` |
+| 08 | `08_run_rmats.sh` | rMATS: read BAMs, detect and count events (`--novelSS --statoff`) | `rmats/` |
+| 12 | `12_rmats_prefiltered.sh` | rMATS statistics on events passing the junction rules | `rmats_prefiltered/` |
+| 11 | `11_filter_rmats.py` | rMATS significance filter | `rmats_prefiltered/<group>/<contrast>/filtered_jc10_fdr0.05_absdpsi0.1/` |
+| 09 | `09_grase_annotation.sh` | GrASE per-gene files, splicing graphs, bipartitions, overhang filter | `grase/` |
+| 10 | `10_grase_count.sh` | GrASE Stage 1: DEXSeq exonic-part counts | `grase/DEXSeq/count_files/` |
+| 13 | `13_grase_test.sh` | GrASE Stages 2, 2b, 3: counts onto bipartitions, junction substitution, tests | `grase/test_anc12/<group>/grase_exsj/` |
 | | `run_downstream.sh` | Runs 08 -> 12 -> 11 and 09 -> 10 -> 13 in parallel on one annotation | `rmats[_TAG]/`, `grase[_TAG]/` |
 | | `run_all.sh` | setup -> 02 -> 03 -> run_downstream | `run_all.log` |
 
@@ -47,15 +51,12 @@ Tested end to end in a fresh directory (`test_e2e/`: chr10, 2 groups x 3 conditi
 `support/junction_counts/` (unique junction reads), `support/junction_counts_anchor/` (overhang),
 `support/junction_counts_multi/` (multi-mapped reads). Sample groups: `support/samples.tsv`.
 
-Current build: 2026-11-13 to 2026-11-15. Numbers below are from it.
-
-**History.** The first build (2026-10 to 2026-11-12) assembled with StringTie 2.2.3 per sample (cluster run,
+**History.** The water-study's first build (2026-10 to 2026-11-12) assembled with StringTie 2.2.3 per sample (cluster run,
 multi-mapped reads included, MAKER guide) plus an Aletsch meta-assembly. It fused neighbouring genes and
 near-identical paralogs into single loci (e.g. a receptor-like-protein cluster, a MATE transporter pair, a
 read-through across four unrelated genes), and most GrASE events that "replicated" across taxa sat in such
-loci. Its scripts are kept outside the repository (`obsolete/` in the original project); its outputs were deleted on 2026-11-15 (the original per-sample StringTie
-assemblies in `taxon*/stringtie/` and the merges `merged.f0.01.gtf`, `merged.f0.05.gtf` are kept as source
-data). Lessons that shaped the current design:
+loci. Its scripts are not in this repository, and its outputs were deleted. Lessons that shaped the current
+design:
 - Multi-mapped reads joined paralog copies; assembly now uses unique reads only (MAPQ 255).
 - Strict assembler settings (StringTie 3 `-g 0 -c 5 -f 0.15 -j 3`) reduced fusions per sample but every
   merger re-fused them, and mergers (`stringtie --merge`, TACO) kept only 45-57% of well-supported junctions
@@ -67,12 +68,14 @@ data). Lessons that shaped the current design:
 
 ## 02 `02_assemble_scallop2.sh` - Scallop2 on unique reads
 
-- **Method:** Scallop2 1.1.2 per sample (bioconda build `h503566f_7`; newer builds need AVX2 and crash on this
-  CPU): `--library_type first --min_mapping_quality 255 --min_transcript_coverage 3.0`. MAPQ 255 = unique for
-  STAR (use 60 for HISAT2); applied while reading, so no filtered BAM copies are needed.
+- **Method:** Scallop2 1.1.2 per sample (bioconda build `h503566f_7`; newer builds need AVX2 and crash on CPUs
+  without it): `--library_type $LIBTYPE --min_mapping_quality $MIN_MAPQ --min_transcript_coverage 3.0`.
+  MAPQ 255 = unique for STAR (use 60 for HISAT2); applied while reading, so no filtered BAM copies are needed.
+- Scallop2 prints its splice graphs even with `--verbose 0` (~3-4 GB per sample); only the last 100 lines of
+  each log (`<sample>.log`) are kept.
 - **Comparison only (`COMPARE_MERGERS=1`, off by default):** `stringtie --merge -g 0 -c 3 -f 0.1` (StringTie
   3.0.0) and `taco_run --isoform-frac 0.1` of the Scallop2 GTFs -> `assembly_unique/merge/`.
-- **Output:** 40,384-57,576 transcripts per sample (median 49,546); `assembly_unique/gtf_list.scallop2.txt`.
+- **This build:** 40,384-57,576 transcripts per sample (median 49,546); `assembly_unique/gtf_list.scallop2.txt`.
   ~3 h for 63 samples with 12 workers.
 
 ## 03 `03_union_filter.sh` - annotation by evidence-based union
@@ -92,8 +95,8 @@ data). Lessons that shaped the current design:
   1,330 genes (6.5%) still joining >= 2 reference genes (mostly gene models the reference split in two).
   Tables in `assembly_unique/union/`: `union.intron_qc.tsv`, `select.log`, `union.readthrough_tx.tsv`,
   `union.bridge_homology.tsv`. ~20 min (BLAST results are cached in `support/swissprot/`).
-- **Reference ("MAKER") genes** = all 27,953 genes of `Metrosideros_polymrpha_incana.scaffolded.gtf`
-  (21,669 `maker-*`, 3,606 `augustus_masked-*`, 2,678 `snap_masked-*`). Without a reference (`REF_GTF=""`)
+- **Reference genes** = all genes of `REF_GTF` (in the water study, all 27,953 MAKER genes: 21,669
+  `maker-*`, 3,606 `augustus_masked-*`, 2,678 `snap_masked-*`). Without a reference (`REF_GTF=""`)
   stages D-D3 are skipped and E groups by exon overlap only; without Swiss-Prot (`HOMOLOGY_DB=""`) D3 is
   skipped. Swiss-Prot: UniProt release in `support/swissprot/RELEASE.txt` (2026_04).
 - **Stress exemption** (keep read-through elevated under stress) is off (`RT_STRESS=0`).
@@ -101,15 +104,16 @@ data). Lessons that shaped the current design:
 
 ## 08 `08_run_rmats.sh` - rMATS detection and counting
 
-- rMATS 4.2.0 per taxon x contrast, groups from `taxon*/metadata/<contrast>/b{1,2}.txt` (stress / control),
-  `--readLength 101 --variable-read-length -t paired --libType fr-firststrand`, `--novelSS --statoff`.
-- Output `rmats_scallop2/<taxon>/<contrast>/`; ~1 h per contrast with 4 threads.
+- rMATS 4.2.0 per group and contrast (`<condition>_vs_<CONTROL>`), b1 = condition, b2 = control, both built
+  from `support/samples.tsv`; `--readLength $READ_LEN --variable-read-length -t paired|single` and `--libType`
+  from `LIBTYPE`; `--novelSS --statoff`.
+- Output `rmats/<group>/<contrast>/`; ~1 h per contrast with 4 threads (this build).
 
 ## 12 `12_rmats_prefiltered.sh` - rMATS statistics on junction-rule events
 
 - `lib/prefilter_rmats_events.py` keeps events whose every junction passes the junction rules (incl.
   overhang; `lib/rmats_junction_rules.py`), `lib/subset_rmats_counts.py` restricts step 08's tables,
-  `rmats.py --task stat`; FDR is over kept events. Output `rmats_scallop2_prefiltered/`.
+  `rmats.py --task stat`; FDR is over kept events. Output `rmats_prefiltered/`.
 
 ## 11 `11_filter_rmats.py` - rMATS significance filter
 
@@ -133,24 +137,26 @@ data). Lessons that shaped the current design:
 
 ## 10 `10_grase_count.sh` - GrASE counting
 
-- GrASE's `dexseq_count.py` per BAM: `--format bam --order pos --paired yes --stranded reverse -a 10`
-  (multi-mapped reads skipped); `count_files/<taxon>_<condition>/`. ~12 h for 63 samples with 12 workers.
+- GrASE's `dexseq_count.py` per BAM: `--format bam --order pos -a 10`, `--paired` from `PAIRED` and
+  `--stranded` from `LIBTYPE` (reverse for dUTP) (multi-mapped reads skipped); `count_files/<group>_<condition>/`.
+  ~12 h for 63 samples with 12 workers (this build).
 
 ## 13 `13_grase_test.sh` - GrASE tests
 
-- Follows `GrASE/scripts/GSE188847/` (stages 30-60), with three groups per taxon and both contrasts per run:
+- Follows `GrASE/scripts/GSE188847/` (stages 30-60), with all conditions of a group and all its contrasts in one
+  run, so the dispersion is estimated over the whole group:
   2. `exoncnt.R`; 2b. `bipartition_sjcnt.R` + `merge_exon_sj_counts.R` + `combine_exoncnt.py` (a side with no
   exclusive exonic part uses its exclusive junctions' reads, from the step 01 BAM counts written as
-  `grase_scallop2/SJ/<taxon>_<condition>/<S>.SJ.out.tab`); 3. `exontest.R`: `betabinom_EBmap`,
+  `grase/SJ/<group>_<condition>/<S>.SJ.out.tab`); 3. `exontest.R`: `betabinom_EBmap`,
   `--dpi_gate=both --padj_threshold=0.05 --padj_method=BH --independent_filtering`, per-base pi.
-- GrASE's R scripts write their error/warning logs to the directory they are run from (the project root);
-  this build's are in `grase_scallop2/root_logs/` (they also hold the first build's entries). Stage 2 failed
-  for one gene (`SG010750` internal, "`x` and `y` must share the same src") in all four taxa; every other
-  gene was counted. `phi.glmmtmb.errors.*` are convergence warnings from the dispersion fits.
+- GrASE's R scripts write their error/warning logs to the directory they are run from; step 13 runs them from
+  `grase/test_anc12/<group>/` (`exoncnt.bipartition.errors.log`; `phi.glmmtmb.errors.*` are convergence
+  warnings from the dispersion fits). In this build stage 2 failed for one gene (`SG010750` internal, "`x`
+  and `y` must share the same src") in all four taxa; every other gene was counted.
 - **Adjustment: plain BH (`PADJ_METHOD=BH`, default since 2026-11-14)**, i.e. FDR over all events of a
   contrast. GrASE's former default `nested_BH` (gene screen, then within-gene BH x m/R) controls a different
   rate and gave 0.6-1x as many calls here (few genes pass its screen, so m/R was 200-5,500).
-- **This build** (significant / tested events; ~13 h total):
+- **This build** (water study; significant / tested events; ~13 h total):
 
 | Taxon | Internal: drought | Internal: waterlogging | Terminal: drought | Terminal: waterlogging |
 |---|---|---|---|---|
@@ -179,14 +185,17 @@ data). Lessons that shaped the current design:
 | `rmats_junction_rules.py`, `prefilter_rmats_events.py`, `subset_rmats_counts.py` | 11, 12 | junction rules for rMATS events |
 | `grase_anchor_filter.py` | 09 D | overhang filter of GrASE events |
 
-## Environments (`/srv/jupyter-homes/jupyter-eynizade/.conda/envs/`)
+## Environments
 
+Conda envs under `ENVS` (set in `pipeline.config.sh`; tool paths are in `config.sh`). Used for the water study:
 `scallop2` (Scallop2 1.1.2, build `h503566f_7`), `stringtie3` (StringTie 3.0.0, build `h29c0135_0`; 3.0.1-3.0.3
 builds need AVX2 and crash on this CPU), `stringtie22` (StringTie 2.2.3, gffcompare 0.12.10), `taco` (TACO
 0.7.3, comparison only), `blast` (BLAST+ 2.17.0), `rmats420` (rMATS 4.2.0, samtools), `grase` (R 4.4,
 GrASE 2.0.0 from `GrASE/Rpkg` with plain BH as default, Python 3.11 + HTSeq; recipe `GrASE/environment.yml`),
-`aletsch`, `agat_env`. Packages were installed with `CONDA_PKGS_DIRS=.conda/pkgs_mirahan` (the shared cache is
-not writable). Run rMATS through the env's python (`$ENV/bin/python $ENV/rMATS/rmats.py`).
+`aletsch`, `agat_env`. `setup.sh` checks that each tool runs on the current CPU. Run rMATS through the env's
+python (`$ENV/bin/python $ENV/rMATS/rmats.py`). GrASE: plain BH is the default in our local copy of
+`GrASE/Rpkg` (`exontest.R --padj_method`, `adjust_pvalues()`); step 13 passes `--padj_method BH` explicitly,
+so an unmodified GrASE gives the same results.
 
 ## Why junction support is counted from the BAMs, not from STAR's SJ.out.tab
 

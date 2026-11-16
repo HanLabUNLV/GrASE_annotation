@@ -34,9 +34,11 @@ run_scallop2() {
   local grp=$1 s=$2 out=$OUT/scallop2/$1/$2.scallop2.gtf
   [[ -s $out ]] && { echo "skip $s"; return; }
   mkdir -p "$(dirname "$out")"
+  # Scallop2 prints its splice graphs even with --verbose 0 (~3 GB per sample): keep the last lines only
   "$SCALLOP2" -i "$BAM_DIR/$s$BAM_SUFFIX" -o "$out.tmp" --library_type "$LIBTYPE" \
     --min_mapping_quality "$MIN_MAPQ" --min_transcript_coverage "$MIN_TX_COV" --verbose 0 \
-    > "$OUT/scallop2/$grp/$s.log" 2>&1 && mv "$out.tmp" "$out" && echo "ok   $s" || { echo "FAIL $s"; return 1; }
+    2>&1 | tail -n 100 > "$OUT/scallop2/$grp/$s.log"
+  [[ ${PIPESTATUS[0]} -eq 0 ]] && mv "$out.tmp" "$out" && echo "ok   $s" || { echo "FAIL $s"; return 1; }
 }
 export -f run_scallop2; export OUT MIN_TX_COV
 echo "== Scallop2 ($(date))"
