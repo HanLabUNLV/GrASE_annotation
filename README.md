@@ -27,8 +27,6 @@ that study's run of 2026-11-13 to 15.
    steps 02 and 03, then `run_downstream.sh` (rMATS and GrASE in parallel). Every step skips finished work,
    so a stopped run restarts with the same command.
 
-Tested end to end from a fresh directory on 2026-11-15 (chromosome 10 of 18 samples, 2 groups x 3 conditions x
-3 samples: setup built the BAM and genome indexes and Swiss-Prot from scratch; all steps ran in ~1 h).
 `run_all.sh` writes `rmats/`, `rmats_prefiltered/` and `grase/`; `TAG=<x>` gives `rmats_<x>/` etc. (the
 water-study build used `TAG=scallop2`).
 
