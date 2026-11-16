@@ -83,7 +83,7 @@ design:
 | A | `gffcompare -i`: union of the 63 assemblies, identical intron chains collapsed; `num_samples` = samples whose assembly has exactly that chain | 454,391 transcripts |
 | B | Junction rules (step 01 engine): every intron canonical (GT-AG/GC-AG/AT-AC), <= 20 kb, >= 3 unique reads in >= 3 samples, each of those with >= 1 read anchored >= 12 bp on both sides (micro-exon introns exempt); single-exon transcripts dropped | 160,585 of 242,071 introns pass (19% non-canonical); 332,472 transcripts |
 | C | `lib/select_transcripts.py`: paralog filter (drop transcripts using a junction whose reads are > 50% multi-mapped, `MAX_MULTI_FRAC`), then keep transcripts assembled in >= 5 samples (`MIN_SAMPLES`) plus rarer ones that add a junction no kept transcript has | 2,925 paralog junctions (9,328 transcripts); 101,160 + 31,168 rescued = 132,328 transcripts, no junction lost |
-| D | Junction-level read-through (step 01 stages 7-9): junctions joining two reference genes with < 0.2 x the genes' own junction reads | 216 transcripts dropped |
+| D | Junction-level read-through (step 01 stages 4-6): junctions joining two reference genes with < 0.2 x the genes' own junction reads | 216 transcripts dropped |
 | D2 | `lib/readthrough_tx_filter.py`: transcripts whose exons touch >= 2 reference genes (however linked) dropped if assembled in < 0.5 x the samples of the stronger gene's best own transcript (`RT_TX_RATIO`, `RT_TX_COMPARE=max`) | 1,344 dropped |
 | D3 | `lib/homology_bridges.py`: for each pair of reference genes a remaining bridge joins, both reference proteins vs Swiss-Prot (local blastp, E <= 1e-5, top 20). Halves of one protein -> keep; unrelated proteins (fusion) or the same region (paralog chimera) -> drop; no hit -> keep | 2,213 pairs: 567 split genes, 291 different, 259 duplicate, 1,096 unknown; 1,706 transcripts dropped |
 | E | `lib/assign_genes.py`: genes = transcripts with overlapping exons on the same strand, but groups touching different reference genes are not joined by exon overlap alone; `ref_gene_id` = overlapping reference genes or `novel` | 6,819 overlap joins blocked |
@@ -173,7 +173,7 @@ design:
 | `junction_anchor_counts.sh` | 01 / 03 B | per-sample junction reads with >= 12 bp aligned on both sides |
 | `junction_multimap_counts.sh` | 03 C | per-sample junction reads from multi-mapped primary alignments |
 | `select_transcripts.py` | 03 C | paralog filter; sample-support selection with junction rescue |
-| `bridging_ratio.py`, `readthrough_by_condition.py`, `readthrough_filter.py`, `split_disjoint_genes.py` | 01 stages 7-9 / 03 D | junction-level read-through filter |
+| `bridging_ratio.py`, `readthrough_by_condition.py`, `readthrough_filter.py`, `split_disjoint_genes.py` | 01 stages 4-6 / 03 D | junction-level read-through filter |
 | `readthrough_tx_filter.py` | 03 D2 | transcript-level read-through filter |
 | `homology_bridges.py` | 03 D3 | Swiss-Prot homology of bridged reference genes |
 | `assign_genes.py` | 03 E | gene ids by exon overlap, reference-aware; `ref_gene_id` |

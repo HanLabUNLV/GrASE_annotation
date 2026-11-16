@@ -15,7 +15,7 @@
 #        reads from support/junction_counts_multi, lib/junction_multimap_counts.sh)
 #      - keep transcripts assembled in >= MIN_SAMPLES samples, plus rarer ones that carry a
 #        junction no kept transcript has (no junction that passed B is lost) -> union/union.selected.gtf
-#   D. read-through filter (step 01 stages 7-9, as step 06): junctions joining two reference (MAKER)
+#   D. read-through filter (step 01 stages 4-6): junctions joining two reference (MAKER)
 #      genes with < 0.2 x the genes' own junction reads are dropped (stress-elevated ones are kept
 #      only with RT_STRESS=1; off by default)
 #                                                                   -> union/union.nort.gtf
@@ -66,8 +66,7 @@ echo "A  union: $(n_tx "$U/union.combined.gtf") transcripts"
 
 # B. junction rules (step 01 engine; per-sample junction and overhang counts are cached)
 if [[ ! -s $U/union.junction.gtf ]]; then
-  REF=$U/union.combined.gtf LIST=$ASM/gtf_list.scallop2.txt GTF_SUFFIX=.scallop2.gtf MIN=0 SUPPORT_TABLE=0 \
-  FINAL_GTF=$U/union.junction.gtf INTRON_TABLE=$U/union.intron_qc.tsv JOBS=$JOBS \
+  REF=$U/union.combined.gtf FINAL_GTF=$U/union.junction.gtf INTRON_TABLE=$U/union.intron_qc.tsv \
     pipeline/01_filter_support.sh > "$U/junction_rules.log" 2>&1 || { cat "$U/junction_rules.log"; exit 1; }
 fi
 grep -E 'introns:|dropped|kept' "$U/junction_rules.log" | sed 's/^ */B  /'
@@ -87,7 +86,7 @@ sed 's/^/C  /' "$U/select.log"
 if [[ -n $REF_GTF ]]; then
   if [[ ! -s $U/union.nort.gtf ]]; then
     ONLY_READTHROUGH=1 FINAL_GTF=$U/union.selected.gtf NORT_GTF=$U/union.nort.gtf RT_PREFIX=$U/union \
-    MAKER_GTF=$REF_GTF CONDITIONS=$CONDITIONS RT_MIN_READS=$RT_MIN_READS_D pipeline/01_filter_support.sh > "$U/readthrough.log" 2>&1 \
+    RT_MIN_READS=$RT_MIN_READS_D pipeline/01_filter_support.sh > "$U/readthrough.log" 2>&1 \
       || { cat "$U/readthrough.log"; exit 1; }
   fi
   sed 's/^ */D  /' "$U/readthrough.log" | grep -v '^D  $'
