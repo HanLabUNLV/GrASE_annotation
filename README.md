@@ -76,27 +76,131 @@ design:
 
 ## 03 `03_union_filter.sh` - annotation by evidence-based union
 
-| Stage | What | Result (this build) |
-|---|---|---|
-| A | `gffcompare -i`: union of the 63 assemblies, identical intron chains collapsed; `num_samples` = samples whose assembly has exactly that chain | 454,391 transcripts |
-| B | Junction rules (step 01 engine): every intron canonical (GT-AG/GC-AG/AT-AC), <= 20 kb, >= 3 unique reads in >= 3 samples, each of those with >= 1 read anchored >= 12 bp on both sides (micro-exon introns exempt); single-exon transcripts dropped | 160,585 of 242,071 introns pass (19% non-canonical); 332,472 transcripts |
-| C | `lib/select_transcripts.py`: paralog filter (drop transcripts using a junction whose reads are > 50% multi-mapped, `MAX_MULTI_FRAC`), then keep transcripts assembled in >= 5 samples (`MIN_SAMPLES`) plus rarer ones that add a junction no kept transcript has | 2,925 paralog junctions (9,328 transcripts); 101,160 + 31,168 rescued = 132,328 transcripts, no junction lost |
-| D | Junction-level read-through (step 01 stages 4-6): junctions joining two reference genes with < 0.2 x the genes' own junction reads | 216 transcripts dropped |
-| D2 | `lib/readthrough_tx_filter.py`: transcripts whose exons touch >= 2 reference genes (however linked) dropped if assembled in < 0.5 x the samples of the stronger gene's best own transcript (`RT_TX_RATIO`, `RT_TX_COMPARE=max`) | 1,344 dropped |
-| D3 | `lib/homology_bridges.py`: for each pair of reference genes a remaining bridge joins, both reference proteins vs Swiss-Prot (local blastp, E <= 1e-5, top 20). Halves of one protein -> keep; unrelated proteins (fusion) or the same region (paralog chimera) -> drop; no hit -> keep | 2,213 pairs: 567 split genes, 291 different, 259 duplicate, 1,096 unknown; 1,706 transcripts dropped |
-| E | `lib/assign_genes.py`: genes = transcripts with overlapping exons on the same strand, but groups touching different reference genes are not joined by exon overlap alone; `ref_gene_id` = overlapping reference genes or `novel` | 6,819 overlap joins blocked |
+**Goal.** Turn the per-sample assemblies of step 02 into one annotation that (1) keeps every splice junction
+the reads support well, so every splicing event can be tested, and (2) does not contain transcripts that
+the assembler built from artifacts. Downstream, rMATS and GrASE define their events from this annotation,
+and GrASE tests events *within a gene*. Two kinds of artifact matter most:
+- **false junctions** (misalignments, untrimmed read ends, reads from a near-identical paralog), which
+  create events that do not exist;
+- **fused genes**: one transcript that runs from one gene into the next (read-through) or joins two
+  copies of a duplicated gene makes the two genes one locus, so GrASE tests "path through gene A vs path
+  through gene B" as if it were splicing.
 
-- **Output:** `assembly_unique/annotation.final.gtf`: **129,062 transcripts, 20,478 genes** (6.3 per gene,
-  max 44), 150,813 well-supported junctions (63% of all junctions with >= 3 unique reads in >= 3 samples),
-  1,330 genes (6.5%) still joining >= 2 reference genes (mostly gene models the reference split in two).
-  Tables in `assembly_unique/union/`: `union.intron_qc.tsv`, `select.log`, `union.readthrough_tx.tsv`,
-  `union.bridge_homology.tsv`. ~20 min (BLAST results are cached in `support/swissprot/`).
-- **Reference genes** = all genes of `REF_GTF` (in the water study, all 27,953 MAKER genes: 21,669
-  `maker-*`, 3,606 `augustus_masked-*`, 2,678 `snap_masked-*`). Without a reference (`REF_GTF=""`)
-  stages D-D3 are skipped and E groups by exon overlap only; without Swiss-Prot (`HOMOLOGY_DB=""`) D3 is
-  skipped. Swiss-Prot: UniProt release in `support/swissprot/RELEASE.txt` (2026_04).
-- **Stress exemption** (keep read-through elevated under stress) is off (`RT_STRESS=0`).
-- **Check (40 sampled bridged pairs, web BLAST vs local):** 39 of 40 classified the same.
+**Why a union and not a merge.** Tools that merge assemblies (`stringtie --merge`, TACO) keep only the
+dominant isoforms of each locus: here they kept 45-57% of the well-supported junctions, against 73% present
+in the per-sample assemblies. Step 03 therefore keeps all assembled transcripts and removes what fails
+explicit, data-based rules, stage by stage. Each stage writes its own output in `assembly_unique/union/`, and
+a rerun skips stages whose output exists (delete a stage's output to redo it and everything after it).
+
+**Terms.** *Junction* (= intron): a splice from one exon end to the next exon start, identified by
+chromosome and first/last intron base. *Well-supported junction*: >= 3 unique reads in >= 3 samples.
+*Reference genes*: the gene models in `REF_GTF` (optional). *Bridging transcript*: a transcript whose exons
+overlap exons of >= 2 different reference genes.
+
+### Stage A - union of the assemblies (`gffcompare -i`)
+All per-sample GTFs are combined; transcripts with an identical intron chain (same junctions in the same
+order) become one. Each transcript gets `num_samples`, the number of samples whose own assembly contains
+exactly that intron chain. This is the evidence stage C uses: a transcript assembled independently in many
+samples is more credible than one assembled once.
+-> `union.combined.gtf` (this build: 454,391 transcripts from 63 assemblies)
+
+### Stage B - junction rules (`01_filter_support.sh`)
+Every junction of the union is checked against read evidence counted directly from the BAMs (uniquely
+mapped, primary alignments; see "Why junction support is counted from the BAMs"). A transcript is kept only
+if all its junctions pass:
+
+| Rule | Why |
+|---|---|
+| Canonical splice motif: GT-AG, GC-AG or AT-AC on the transcript strand (from the genome sequence) | >99% of real plant introns are canonical; non-canonical "introns" are mostly alignment artifacts |
+| Intron <= 20 kb (`MAX_INTRON`) | very long introns were weakly supported and chained neighbouring genes together |
+| >= 3 unique reads in >= 3 samples (`INTRON_MIN_READS`, `INTRON_MIN_SAMPLES`) | replicated evidence, not one sample's noise |
+| Overhang: in each of those samples, >= 1 read with >= 12 aligned bases on both sides (`ANCHOR_MIN`) | reads that reach only a few bases past a "junction" are often untrimmed read ends forced into a splice (e.g. CIGAR `90M65N3M7S`); STAR applies the same 12 bp rule to its own junction report. Introns next to an exon shorter than 12 bp are exempt, because no read can anchor 12 bp in it |
+
+Single-exon transcripts are dropped (they carry no junction and no testable splicing, and often no strand).
+Per-sample counts are cached in `support/junction_counts/` and `support/junction_counts_anchor/`.
+-> `union.junction.gtf`; `union.intron_qc.tsv` lists every junction with motif, reads, samples, anchored
+samples and pass/fail (this build: 160,585 of 242,071 junctions pass, 19% were non-canonical; 332,472
+transcripts left)
+
+### Stage C - paralog filter and transcript selection (`lib/select_transcripts.py`)
+1. **Paralog filter.** In families of near-identical gene copies, reads from one copy also align to the
+   others; even reads that the aligner calls unique may be placed on the wrong copy, and the assembler then
+   builds chimeric transcripts across copies. For every junction the reads from multi-mapped alignments are
+   counted (`support/junction_counts_multi/`, `lib/junction_multimap_counts.sh`); a junction where more than
+   half of the reads are multi-mapped (`MAX_MULTI_FRAC=0.5`) marks such a region, and transcripts using it
+   are dropped.
+2. **Selection by sample support.** Assemblers combine known junctions into many rare intron chains
+   (about half of the union's transcripts were assembled in one sample only); most add no new junction, but each one adds paths that GrASE must
+   enumerate. A transcript is kept if its intron chain was assembled in >= 5 samples (`MIN_SAMPLES`).
+3. **Junction rescue.** Rarer transcripts are then added back, most supported first, whenever they carry a
+   junction that no kept transcript has. So selection never loses a junction that passed stage B; it only
+   removes redundant combinations.
+-> `union.selected.gtf`, `select.log` (this build: 2,925 paralog junctions removed 9,328 transcripts;
+101,160 transcripts with >= 5 samples + 31,168 rescued = 132,328, with all 153,489 junctions retained)
+
+### Stage D - read-through, junction level (`01_filter_support.sh`, `lib/bridging_ratio.py`)
+Read-through transcription continues past the end of one gene into the next and splices an exon of gene A
+to an exon of gene B. It is usually a minor product. For each junction whose donor lies in one reference
+gene and acceptor in another, the ratio of its reads to the typical (median) junction reads inside the two
+genes is computed. A ratio < 0.2 means a minor bridge next to two active genes: the junction is dropped,
+with the transcripts using it. A ratio around 1 or higher means the bridge is as strong as the genes'
+own splicing, which usually means the reference split one real gene into two models; these are kept.
+-> `union.nort.gtf`, `union.bridging_ratio.tsv`, `union.readthrough_by_condition.tsv` (this build: 216
+transcripts dropped)
+
+### Stage D2 - read-through, transcript level (`lib/readthrough_tx_filter.py`)
+Stage D only sees junctions with both ends inside reference genes. Read-through also appears as an exon
+running across the gap between two genes, or as a junction into an unannotated exon just outside a gene
+model. Stage D2 therefore looks at whole transcripts: every bridging transcript is compared with the
+transcripts that each touched gene has on its own (support = `num_samples`):
+- **dropped** if it was assembled in fewer than 0.5 x the samples of the stronger gene's best own
+  transcript (`RT_TX_RATIO=0.5`, `RT_TX_COMPARE=max`): a minor product next to established genes;
+- **kept** if it is as common as the genes' own transcripts (the joined form is what is transcribed), or
+  if a touched gene has no transcript of its own (the gene exists only as part of the joined form, as when
+  the reference split one gene).
+-> `union.nort_tx.gtf`, `union.readthrough_tx.tsv` with the decision per bridging transcript (this build:
+1,344 dropped)
+
+### Stage D3 - protein homology of bridged genes (`lib/homology_bridges.py`)
+After D2 the remaining bridges are frequent, and frequency cannot distinguish a gene that the reference
+split in two from two unrelated genes that are always co-transcribed. Protein homology can. For every pair
+of reference genes that a remaining bridging transcript joins, both reference proteins (first coding
+model of each gene, translated from the genome) are searched against UniProt Swiss-Prot with local
+`blastp` (E <= 1e-5, top 20 hits):
+
+| Result | Interpretation | Action |
+|---|---|---|
+| both hit the same protein, in different regions (e.g. residues 1-200 and 220-600) | halves of one protein: the reference split one gene | keep the joined transcripts |
+| both have hits, to different proteins | two different genes: fusion / read-through | drop the bridging transcripts |
+| both hit the same protein in the same region | two copies of a duplicated gene: paralog chimera | drop |
+| no hit for one or both | no evidence either way | keep |
+
+BLAST results are cached in `support/swissprot/ref_proteins.blastp.tsv`, so reruns only search new genes.
+-> `union.nort_hom.gtf`, `union.bridge_homology.tsv` with the class of every gene pair (this build: 2,213
+pairs: 567 split genes, 291 different proteins, 259 duplicates, 1,096 without hits; 1,706 transcripts
+dropped)
+
+### Stage E - genes (`lib/assign_genes.py`)
+Transcripts are grouped into genes: transcripts on the same strand whose exons overlap belong to one gene
+(overlapping *spans* are not enough, so a gene inside another gene's intron, or two neighbours, stay
+separate). With a reference, two groups that touch *different* reference genes are not joined by exon
+overlap alone (neighbouring genes whose UTRs extend into each other); only a transcript that itself touches
+both genes (a bridge kept by D2/D3) joins them. Genes are numbered `SG000001`... by position, and every
+transcript gets `ref_gene_id`: the reference genes its exons overlap, or `novel`.
+-> `annotation.final.gtf` (this build: 6,819 exon-overlap joins between different reference genes blocked)
+
+### Output and options
+- **`assembly_unique/annotation.final.gtf`** (this build): **129,062 transcripts in 20,478 genes** (6.3 per
+  gene, max 44); 150,813 well-supported junctions (63% of all well-supported junctions in the data; the rest
+  are absent from every assembly or fail a rule above: motif, length, overhang, paralog or read-through); 1,330 genes (6.5%) still join >= 2 reference genes,
+  mostly genes the reference split in two. Run time ~20 min.
+- **Without a reference** (`REF_GTF=""`): stages D-D3 are skipped and E groups by exon overlap only.
+  **Without Swiss-Prot** (`HOMOLOGY_DB=""`): D3 is skipped.
+- **Settings:** `MIN_SAMPLES` (5), `MAX_MULTI_FRAC` (0.5), `RT_TX_RATIO` (0.5), `RT_TX_COMPARE` (max),
+  `RT_STRESS` (0; 1 keeps read-through that is elevated under a treatment in some group, in D and D2).
+- **Water-study reference:** all 27,953 MAKER genes (21,669 `maker-*`, 3,606 `augustus_masked-*`, 2,678
+  `snap_masked-*`); Swiss-Prot release 2026_04. A web-BLAST check of 40 bridged gene pairs agreed with the
+  local classification for 39.
 
 ## 08 `08_run_rmats.sh` - rMATS detection and counting
 
