@@ -151,9 +151,6 @@ design:
   `grase/test_anc12/<group>/` (`exoncnt.bipartition.errors.log`; `phi.glmmtmb.errors.*` are convergence
   warnings from the dispersion fits). In this build stage 2 failed for one gene (`SG010750` internal, "`x`
   and `y` must share the same src") in all four taxa; every other gene was counted.
-- **Adjustment: plain BH (`PADJ_METHOD=BH`, default since 2026-11-14)**, i.e. FDR over all events of a
-  contrast. GrASE's former default `nested_BH` (gene screen, then within-gene BH x m/R) controls a different
-  rate and gave 0.6-1x as many calls here (few genes pass its screen, so m/R was 200-5,500).
 - **This build** (water study; significant / tested events; ~13 h total):
 
 | Taxon | Internal: drought | Internal: waterlogging | Terminal: drought | Terminal: waterlogging |
@@ -189,11 +186,9 @@ Conda envs under `ENVS` (set in `pipeline.config.sh`; tool paths are in `config.
 `scallop2` (Scallop2 1.1.2, build `h503566f_7`), `stringtie3` (StringTie 3.0.0, build `h29c0135_0`; 3.0.1-3.0.3
 builds need AVX2 and crash on this CPU), `stringtie22` (StringTie 2.2.3, gffcompare 0.12.10), `taco` (TACO
 0.7.3, comparison only), `blast` (BLAST+ 2.17.0), `rmats420` (rMATS 4.2.0, samtools), `grase` (R 4.4,
-GrASE 2.0.0 from `GrASE/Rpkg` with plain BH as default, Python 3.11 + HTSeq; recipe `GrASE/environment.yml`),
+GrASE 2.0.0 from `GrASE/Rpkg`, Python 3.11 + HTSeq; recipe `GrASE/environment.yml`),
 `aletsch`, `agat_env`. `setup.sh` checks that each tool runs on the current CPU. Run rMATS through the env's
-python (`$ENV/bin/python $ENV/rMATS/rmats.py`). GrASE: plain BH is the default in our local copy of
-`GrASE/Rpkg` (`exontest.R --padj_method`, `adjust_pvalues()`); step 13 passes `--padj_method BH` explicitly,
-so an unmodified GrASE gives the same results.
+python (`$ENV/bin/python $ENV/rMATS/rmats.py`).
 
 ## Why junction support is counted from the BAMs, not from STAR's SJ.out.tab
 
