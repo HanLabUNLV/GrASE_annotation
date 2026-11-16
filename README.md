@@ -274,17 +274,17 @@ transcript gets `ref_gene_id`: the reference genes its exons overlap, or `novel`
 Follows `GrASE/scripts/GSE188847/` stage 80 without DEXSeq. Run after `run_downstream.sh`:
 `RMATS=rmats_prefiltered WD=grase pipeline/14_compare_rmats_grase.sh` (output `OUT=comparison_rmats_grase`).
 
-1. `lib/rmats_event_union.py union`: the distinct rMATS events of all contrasts. rMATS detects events per
-   contrast, but the lists overlap heavily (water study: 1.17 M event rows, 17% distinct).
-2. GrASE's `map_rmats_bipartitions.R`, once per class (internal, terminal), on that union: each event's two
-   forms are placed on the splicing graph and matched to the bipartition whose two sides hold them. The match
-   depends only on the event and its gene, so this equals mapping each contrast separately (checked: identical
-   output for one contrast) at a fraction of the cost (water study, 16 cores: ~1.8 h for both classes instead of
-   ~1 h per contrast and class, ~16 h). Progress is logged every 5% of genes to `<OUT>/union/map.<class>.log`.
-3. `lib/rmats_event_union.py split`: each contrast's own events and IDs -> `<contrast>/map.<class>/`.
-4. `compare_rmats_grase.R` per contrast and class -> `grase_vs_rmats.<class>.txt` (events matched by both
+1. GrASE's `map_rmats_bipartitions.R`, once per class (internal, terminal), with all contrasts in one call
+   (comma-separated `--rmatsdir`/`--outdir`): each event's two forms are placed on the splicing graph and
+   matched to the bipartition whose two sides hold them. rMATS detects events per contrast, but the lists
+   overlap heavily (water study: 1.17 M event rows, 17% distinct), and the match depends only on the event and
+   its gene, so the script maps the distinct events once and writes each contrast's own mapping
+   (`<contrast>/map.<class>/`), identical to mapping the contrasts one by one (water study, 16 cores: ~1.8 h
+   for both classes instead of ~1 h per contrast and class, ~16 h). Log with progress every 5% of genes:
+   `<OUT>/map.<class>.log`.
+2. `compare_rmats_grase.R` per contrast and class -> `grase_vs_rmats.<class>.txt` (events matched by both
    tools, called by either, agreement of direction), `.parts.txt`, `.discrepancies.txt`, `.pdf`.
-5. `compare_parts_upset.R` (without `--dexseq`) -> `upset/`: UpSet plots of exonic parts called by GrASE
+3. `compare_parts_upset.R` (without `--dexseq`) -> `upset/`: UpSet plots of exonic parts called by GrASE
    (internal, terminal) and rMATS, over all parts and over parts both tools tested.
 
 Calls: GrASE `significant`; rMATS FDR < 0.05 and |ΔPSI| >= 0.1.
@@ -302,7 +302,6 @@ Calls: GrASE `significant`; rMATS FDR < 0.05 and |ΔPSI| >= 0.1.
 | `assign_genes.py` | 03 E | gene ids by exon overlap, reference-aware; `ref_gene_id` |
 | `rmats_junction_rules.py`, `prefilter_rmats_events.py`, `subset_rmats_counts.py` | 11, 12 | junction rules for rMATS events |
 | `grase_anchor_filter.py` | 09 D | overhang filter of GrASE events |
-| `rmats_event_union.py` | 14 | map rMATS events onto bipartitions once for all contrasts |
 
 ## Environments
 
