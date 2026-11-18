@@ -1,4 +1,4 @@
-"""Step 11: filter rMATS JC results (tag jc10_fdr0.05_absdpsi0.1), as documented in
+"""Step 10: filter rMATS JC results (tag jc10_fdr0.05_absdpsi0.1), as documented in
 taxon*/README.md for the original ../filter_rmats_jc_fdr_dpsi.py (not on this server):
   1. mean (IJC + SJC) per sample >= MIN_JC in at least one group
   2. FDR < MAX_FDR
@@ -15,10 +15,10 @@ samples must also each have >= 1 read with >= 12 bp aligned on both sides of the
 (--anchor_dir, from lib/junction_anchor_counts.sh); SE/MXE inner exons < 12 bp are exempt.
 Output then goes to filtered_<tag>_jqc_anc12/ (without it: filtered_<tag>_jqc/).
 
-usage: python 11_filter_rmats.py <rmats_base_dir> <annotation.gtf> [min_jc=10] [max_fdr=0.05] [min_dpsi=0.1]
+usage: python 10_filter_rmats.py <rmats_base_dir> <annotation.gtf> [min_jc=10] [max_fdr=0.05] [min_dpsi=0.1]
          [--junc_dir support/junction_counts --genome <genome.fa> --max_intron 20000 --min_samples 3 --min_reads 3
           --anchor_dir support/junction_counts_anchor --anchor_min 12 | --no_anchor]
-  e.g.   python pipeline/11_filter_rmats.py rmats_scallop2_prefiltered assembly_unique/annotation.final.gtf \\
+  e.g.   python pipeline/10_filter_rmats.py rmats_scallop2_prefiltered assembly_unique/annotation.final.gtf \\
            --junc_dir support/junction_counts --genome <genome.fa>
   reads    <base>/<group>/<contrast>/out/{SE,A5SS,A3SS,MXE,RI}.MATS.JC.txt   (any <group>, any <a>_vs_<b>)
   writes   <base>/<taxon>/<contrast>/filtered_<tag>/<event>.MATS.JC.filtered.csv        (steps 1-3)
@@ -61,7 +61,7 @@ def mean_counts(col):
         return sum(v) / len(v) if v else 0.0
     return col.map(m)
 
-# ---- junction QC (rules shared with step 12: pipeline/lib/rmats_junction_rules.py) ----
+# ---- junction QC (rules shared with step 09: pipeline/lib/rmats_junction_rules.py) ----
 jqc = a.junc_dir is not None
 if jqc:
     if not a.genome: sys.exit('--genome is required with --junc_dir')

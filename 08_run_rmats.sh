@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Step 08: rMATS per group and contrast (each condition vs $CONTROL within a group; groups and
 # conditions from $SAMPLES) with the step 03 annotation and --novelSS: reads the BAMs, detects and
-# counts events. With the default --statoff, statistics are run in step 12 on the events passing the
+# counts events. With the default --statoff, statistics are run in step 09 on the events passing the
 # junction rules. b1 = treatment, b2 = control. Library settings from pipeline/config.sh.
 # Contrasts with a finished summary.txt are skipped, so the script can be restarted.
 # (This project's groups equal the original taxon*/metadata/<contrast>/b{1,2}.txt lists.)

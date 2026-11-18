@@ -1,4 +1,4 @@
-"""Junction rules for rMATS events (shared by step 11 and step 12).
+"""Junction rules for rMATS events (shared by step 09 and step 10).
 
 An event passes when every junction of every isoform (inclusion and skipping forms) is
 canonical (GT-AG/GC-AG/AT-AC on the event strand), <= max_intron bp, and has >= min_reads

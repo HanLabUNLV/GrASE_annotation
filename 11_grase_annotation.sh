@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Step 09: GrASE annotation files from one GTF (GrASE README, "Building the annotation
+# Step 11: GrASE annotation files from one GTF (GrASE README, "Building the annotation
 # files from scratch", sections A-C):
 #   A. per-gene GTFs, per-gene DEXSeq GFFs (+ concatenated GFF for counting), splicing
 #      graphs (GrASE/scripts/createfiles.sh)
@@ -12,7 +12,7 @@
 # Output under $WD: ref/, gtf/, dexseq.gff/, graphml/, bipartition/, bipartition.filtered/,
 #                   bipartition.filtered.anc12/ (+ .removed.tsv)
 #
-# Usage: GTF=<annotation.gtf> WD=<grase workdir> pipeline/09_grase_annotation.sh
+# Usage: GTF=<annotation.gtf> WD=<grase workdir> pipeline/11_grase_annotation.sh
 #   default: assembly_unique/annotation.final.gtf -> grase/
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")/.."   # project directory

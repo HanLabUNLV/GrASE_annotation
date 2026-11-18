@@ -1,0 +1,43 @@
+name: grase
+channels:
+  - conda-forge
+dependencies:
+  - r-base=4.4
+  - bioconductor-splicinggraphs
+  - bioconductor-txdbmaker
+  - bioconductor-genomicfeatures
+  - bioconductor-annotationdbi
+  - bioconductor-dexseq
+  - bioconductor-rtracklayer
+  - bioconductor-genomeinfodb
+  - bioconductor-iranges
+  - bioconductor-s4vectors
+  - bioconductor-matrixgenerics
+  - bioconductor-goseq
+  - bioconductor-go.db
+  - r-glmmtmb
+  - r-igraph
+  - r-optparse
+  - r-tidyverse
+  - r-data.table
+  - r-matrixstats
+  - r-upsetr
+  - r-patchwork
+  - r-systemfonts
+  - r-ggrastr
+  - r-cairo
+  - r-fs
+  - r-knitr
+  - r-rmarkdown
+  - r-testthat
+  - python=3.11
+  - htseq
+  - scipy
+  - pandas
+  - numpy
+  - samtools
+  - r-tmb=1.9.19
+  - r-lme4[version='>=2.0']
+  - ca-certificates
+  - openssl
+  - parallel

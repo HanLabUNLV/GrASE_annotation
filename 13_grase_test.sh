@@ -3,7 +3,7 @@
 # per group ($SAMPLES), each condition vs $CONTROL, for internal and terminal events.
 # Follows the repo's worked example GrASE/scripts/GSE188847/ (stages 30, 40, 50, 60), with all
 # conditions per group (--conditions) and all contrasts in one run instead of one.
-#   2.  exoncnt.R: sum DEXSeq exonic-part counts (step 10) onto each bipartition's shared
+#   2.  exoncnt.R: sum DEXSeq exonic-part counts (step 12) onto each bipartition's shared
 #       reference and two distinct sets -> <group>/bipartition.ex.<class>.counts/
 #   2b. bipartition_sjcnt.R + merge_exon_sj_counts.R: where a side has no exclusive exonic part,
 #       use its exclusive junctions' split reads instead -> <group>/bipartition.exsj.<class>.counts/
@@ -19,7 +19,7 @@
 #       Other thresholds are exontest.R defaults (min_dpi 0.05, min_reads 10 in one group,
 #       min_effect |log OR| 0.5); adjustment PADJ_METHOD=BH (plain Benjamini-Hochberg per
 #       contrast; nested_BH = GrASE's gene screen, its default before 2026-11-14); MIN_DPI=<x> overrides min_dpi.
-# Events: $BIP, by default bipartition.filtered.anc12/ (step 09 D, overhang filter).
+# Events: $BIP, by default bipartition.filtered.anc12/ (step 11 D, overhang filter).
 # Restartable: a stage whose output exists is skipped (delete the directory to redo it).
 #
 # Groups and conditions come from $SAMPLES (pipeline/config.sh): per group, every condition is tested

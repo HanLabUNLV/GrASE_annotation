@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Whole pipeline: setup checks -> 02 (Scallop2) -> 03 (annotation) -> rMATS (08, 12, 11) and GrASE
-# (09, 10, 13) in parallel. Settings: pipeline/config.sh. Each step skips work already done, so a
+# Whole pipeline: setup checks -> 02 (Scallop2) -> 03 (annotation) -> rMATS (08, 09, 10) and GrASE
+# (11, 12, 13) in parallel. Settings: pipeline/config.sh. Each step skips work already done, so a
 # stopped run can be restarted with the same command.
 # Usage (from anywhere): nohup pipeline/run_all.sh > run_all.log 2>&1 &
 set -euo pipefail

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Step 10: GrASE Stage 1 counting. DEXSeq exonic-part counts per BAM against the
-# concatenated per-gene GFF from step 09 (counts must use that GFF to join the graphs).
+# Step 12: GrASE Stage 1 counting. DEXSeq exonic-part counts per BAM against the
+# concatenated per-gene GFF from step 11 (counts must use that GFF to join the graphs).
 #   --paired yes --stranded reverse (fr-firststrand / dUTP) --order pos -a 10
 #   (-a 10 skips multi-mapped reads: STAR gives them MAPQ <= 3)
 # Count files: $WD/DEXSeq/count_files/<taxon>_<condition>/<S>_counts.txt, condition from

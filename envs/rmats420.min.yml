@@ -1,0 +1,6 @@
+name: rmats420
+channels:
+  - conda-forge
+dependencies:
+  - rmats=4.2.0
+  - samtools

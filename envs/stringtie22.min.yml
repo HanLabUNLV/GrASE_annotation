@@ -1,0 +1,6 @@
+name: stringtie22
+channels:
+  - conda-forge
+dependencies:
+  - stringtie=2.2.3
+  - gffcompare

@@ -1,4 +1,4 @@
-"""Overhang (anchor) filter for GrASE bipartition events (step 09 D; post-hoc filter for
+"""Overhang (anchor) filter for GrASE bipartition events (step 11 D; post-hoc filter for
 annotations built before the step 01 overhang rule, 2026-11-12).
 
 A junction passes when >= min_samples samples have >= min_reads unique reads AND >= 1 read

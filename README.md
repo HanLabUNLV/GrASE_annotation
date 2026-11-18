@@ -36,13 +36,13 @@ water-study build used `TAG=scallop2`).
 | 02 | `02_assemble_scallop2.sh` | Scallop2 per sample on uniquely mapped reads | `assembly_unique/scallop2/<group>/<S>.scallop2.gtf` |
 | 03 | `03_union_filter.sh` | Union of the assemblies; junction rules; paralog filter; selection; read-through and homology checks; genes | `assembly_unique/annotation.final.gtf` |
 | 08 | `08_run_rmats.sh` | rMATS: read BAMs, detect and count events (`--novelSS --statoff`) | `rmats/` |
-| 12 | `12_rmats_prefiltered.sh` | rMATS statistics on events passing the junction rules | `rmats_prefiltered/` |
-| 11 | `11_filter_rmats.py` | rMATS significance filter | `rmats_prefiltered/<group>/<contrast>/filtered_jc10_fdr0.05_absdpsi0.1/` |
-| 09 | `09_grase_annotation.sh` | GrASE per-gene files, splicing graphs, bipartitions, overhang filter | `grase/` |
-| 10 | `10_grase_count.sh` | GrASE Stage 1: DEXSeq exonic-part counts | `grase/DEXSeq/count_files/` |
+| 09 | `09_rmats_prefiltered.sh` | rMATS statistics on events passing the junction rules | `rmats_prefiltered/` |
+| 10 | `10_filter_rmats.py` | rMATS significance filter | `rmats_prefiltered/<group>/<contrast>/filtered_jc10_fdr0.05_absdpsi0.1/` |
+| 11 | `11_grase_annotation.sh` | GrASE per-gene files, splicing graphs, bipartitions, overhang filter | `grase/` |
+| 12 | `12_grase_count.sh` | GrASE Stage 1: DEXSeq exonic-part counts | `grase/DEXSeq/count_files/` |
 | 13 | `13_grase_test.sh` | GrASE Stages 2, 2b, 3: counts onto bipartitions, junction substitution, tests | `grase/test_anc12/<group>/grase_exsj/` |
 | 14 | `14_compare_rmats_grase.sh` | GrASE vs rMATS per contrast: shared events, calls, direction; UpSet plots of exonic parts (optional, not in `run_all.sh`) | `comparison_rmats_grase/<group>/<contrast>/` |
-| | `run_downstream.sh` | Runs 08 -> 12 -> 11 and 09 -> 10 -> 13 in parallel on one annotation | `rmats[_TAG]/`, `grase[_TAG]/` |
+| | `run_downstream.sh` | Runs 08 -> 09 -> 10 and 11 -> 12 -> 13 in parallel on one annotation | `rmats[_TAG]/`, `grase[_TAG]/` |
 | | `run_all.sh` | setup -> 02 -> 03 -> run_downstream | `run_all.log` |
 
 `01_filter_support.sh` is not run on its own any more: step 03 calls it as the engine for the junction rules
@@ -210,24 +210,24 @@ transcript gets `ref_gene_id`: the reference genes its exons overlap, or `novel`
   from `LIBTYPE`; `--novelSS --statoff`.
 - Output `rmats/<group>/<contrast>/`; ~1 h per contrast with 4 threads (this build).
 
-## 12 `12_rmats_prefiltered.sh` - rMATS statistics on junction-rule events
+## 09 `09_rmats_prefiltered.sh` - rMATS statistics on junction-rule events
 
 - `lib/prefilter_rmats_events.py` keeps events whose every junction passes the junction rules (incl.
   overhang; `lib/rmats_junction_rules.py`), `lib/subset_rmats_counts.py` restricts step 08's tables,
   `rmats.py --task stat`; FDR is over kept events. Output `rmats_prefiltered/`.
 
-## 11 `11_filter_rmats.py` - rMATS significance filter
+## 10 `10_filter_rmats.py` - rMATS significance filter
 
 - The study's filter (tag `jc10_fdr0.05_absdpsi0.1`): mean (IJC + SJC) per sample >= 10 in one group,
   FDR < 0.05, |IncLevelDifference| >= 0.1; adds `ref_gene_id`. Optional `--junc_dir` re-applies the junction
-  rules (`_jqc_anc12` output); not needed after step 12.
+  rules (`_jqc_anc12` output); not needed after step 09.
 - **This build:** 16,344 significant events (A3SS 2,704, A5SS 1,919, MXE 197, RI 9,345, SE 2,179).
 - **Caution:** rMATS p-values are inflated here (11-17% of events at p < 0.05 vs ~5% for GrASE and for a
   Welch t-test on per-sample PSI); in the first build only 32-41% of rMATS calls reached even unadjusted
   p < 0.05 on that t-test, because replicate PSI SD (0.12-0.15) exceeds the 0.1 dPSI cut-off. Use GrASE
   calls, or rMATS calls confirmed by a replicate-aware test.
 
-## 09 `09_grase_annotation.sh` - GrASE annotation
+## 11 `11_grase_annotation.sh` - GrASE annotation
 
 - A. `GrASE/scripts/createfiles.sh` (per-gene GTFs and DEXSeq GFFs, concatenated GFF, splicing graphs);
   B. `bubble_path_split.R --split=bipartition`; C. `filterTerminal.R` (internal vs terminal);
@@ -236,7 +236,7 @@ transcript gets `ref_gene_id`: the reference genes its exons overlap, or `novel`
 - **This build:** 16,231 graphs; 12,992 internal and 15,225 terminal bipartition files, 268,400 events (14
   removed by D). ~12 h (stage B ~10 h with 12 workers).
 
-## 10 `10_grase_count.sh` - GrASE counting
+## 12 `12_grase_count.sh` - GrASE counting
 
 - GrASE's `dexseq_count.py` per BAM: `--format bam --order pos -a 10`, `--paired` from `PAIRED` and
   `--stranded` from `LIBTYPE` (reverse for dUTP) (multi-mapped reads skipped); `count_files/<group>_<condition>/`.
@@ -300,8 +300,8 @@ Calls: GrASE `significant`; rMATS FDR < 0.05 and |ΔPSI| >= 0.1.
 | `readthrough_tx_filter.py` | 03 D2 | transcript-level read-through filter |
 | `homology_bridges.py` | 03 D3 | Swiss-Prot homology of bridged reference genes |
 | `assign_genes.py` | 03 E | gene ids by exon overlap, reference-aware; `ref_gene_id` |
-| `rmats_junction_rules.py`, `prefilter_rmats_events.py`, `subset_rmats_counts.py` | 11, 12 | junction rules for rMATS events |
-| `grase_anchor_filter.py` | 09 D | overhang filter of GrASE events |
+| `rmats_junction_rules.py`, `prefilter_rmats_events.py`, `subset_rmats_counts.py` | 09, 10 | junction rules for rMATS events |
+| `grase_anchor_filter.py` | 11 D | overhang filter of GrASE events |
 
 ## Environments
 
@@ -310,6 +310,12 @@ Conda envs under `ENVS` (set in `pipeline.config.sh`; tool paths are in `config.
 `rmats420` (rMATS 4.2.0, samtools 1.21), `grase` (R 4.4, GrASE 2.0.0 from `GrASE/Rpkg`, Python 3.11 + HTSeq,
 pandas, scipy; recipe `GrASE/environment.yml`). `setup.sh` checks that each tool runs on the current CPU. Run rMATS through the env's
 python (`$ENV/bin/python $ENV/rMATS/rmats.py`).
+
+The envs are in `envs/<env>.min.yml`: the packages the env was created with (conda's request history), not every
+installed dependency, so they are portable and the solver picks the rest. To recreate one:
+`mamba env create -p $ENVS/<env> -f pipeline/envs/<env>.min.yml`. Then, for `grase`, install the GrASE R package from
+the clone: `$ENVS/grase/bin/R CMD INSTALL GrASE/Rpkg`. Keep Scallop2 at build `h503566f_7` on CPUs without AVX2
+(newer builds stop with "Illegal instruction").
 
 ## Why junction support is counted from the BAMs, not from STAR's SJ.out.tab
 

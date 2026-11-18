@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Step 12: rMATS statistics on the events that pass the junction rules only.
+# Step 09: rMATS statistics on the events that pass the junction rules only.
 # Step 08 (--novelSS --statoff) reads the BAMs once and detects and counts all events,
 # including events at novel splice sites that never passed the annotation's junction
 # rules. Here, per contrast:
@@ -13,10 +13,10 @@
 # Nothing is recounted: counts, lengths and p-values of kept events are those of step 08.
 # (rmats.py --task post --fixed-event-set was tried first: it swaps IncFormLen/SkipFormLen
 #  for ~40% of MXE events when reloading them, changing their p-values and dPSI.)
-# Output: $BASE/<group>/<contrast>/{events,out}; then filter with step 11.
+# Output: $BASE/<group>/<contrast>/{events,out}; then filter with step 10.
 #
 # Usage: [SRC=rmats BASE=rmats_prefiltered ANCHOR_DIR=support/junction_counts_anchor] \
-#          pipeline/12_rmats_prefiltered.sh
+#          pipeline/09_rmats_prefiltered.sh
 # (contrasts with $BASE/<group>/<contrast>/out/summary.txt are skipped: use a new BASE to redo them)
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")/.."   # project directory
